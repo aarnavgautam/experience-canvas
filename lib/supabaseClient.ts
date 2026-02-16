@@ -6,7 +6,7 @@ import type { Database } from './types/database';
 
 let client: SupabaseClient<Database> | null = null;
 
-export function getSupabaseBrowserClient() {
+export function getSupabaseBrowserClient(): SupabaseClient<Database> {
   if (!client) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey =
