@@ -38,7 +38,7 @@ export default function NewExperiencePage() {
             ? new Date(values.end_at).toISOString()
             : null,
           location_name: values.location_name || null
-        })
+        } as any)
         .select('id')
         .single();
 
