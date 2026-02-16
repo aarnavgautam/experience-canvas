@@ -122,7 +122,7 @@ Magic-link emails will redirect back to `/auth/callback`, where the app exchange
      - `NEXT_PUBLIC_SUPABASE_URL`
      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
      - `SUPABASE_SERVICE_ROLE_KEY`
-   - Optionally: `NEXT_PUBLIC_SITE_URL` = your Vercel URL (e.g. `https://your-app.vercel.app`).
+   - **Important:** Add `NEXT_PUBLIC_SITE_URL` = your live app URL (e.g. `https://your-app.vercel.app`). This makes magic-link emails open your Vercel site instead of localhost.
 
 5. **Configure Supabase for production**:
    - In Supabase **Authentication → URL Configuration**, add your Vercel URL under **Redirect URLs**:

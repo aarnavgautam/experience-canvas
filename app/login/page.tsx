@@ -7,57 +7,75 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 
-const schema = z.object({
-  email: z.string().email('Enter a valid email')
+const signInSchema = z.object({
+  email: z.string().email('Enter a valid email'),
+  password: z.string().min(1, 'Password required')
 });
 
-type FormValues = z.infer<typeof schema>;
+const signUpSchema = z.object({
+  email: z.string().email('Enter a valid email'),
+  password: z.string().min(6, 'Use at least 6 characters')
+});
+
+type SignInValues = z.infer<typeof signInSchema>;
+type SignUpValues = z.infer<typeof signUpSchema>;
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mode, setMode] = useState<'in' | 'up'>('in');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors }
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema)
+  const signInForm = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema)
   });
 
-  const onSubmit = async (values: FormValues) => {
+  const signUpForm = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema)
+  });
+
+  const redirectTo = searchParams?.get('redirectTo') ?? '/app';
+
+  const onSignIn = async (values: SignInValues) => {
     setStatus(null);
     setIsSubmitting(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const redirectTo =
-        (typeof window !== 'undefined'
-          ? `${window.location.origin}/auth/callback`
-          : '/auth/callback') +
-        (searchParams?.get('redirectTo')
-          ? `?redirectTo=${encodeURIComponent(
-              searchParams.get('redirectTo') as string
-            )}`
-          : '');
-
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithPassword({
         email: values.email,
-        options: {
-          emailRedirectTo: redirectTo
-        }
+        password: values.password
       });
-
       if (error) {
-        const msg = error.message.toLowerCase().includes('rate')
-          ? 'Too many emails sent. Wait about an hour or try another address.'
-          : error.message;
-        setStatus(msg);
-      } else {
-        setStatus('Magic link sent! Check your email (and spam).');
+        setStatus(error.message);
+        return;
       }
-    } catch (err: any) {
-      setStatus(err.message ?? 'Unexpected error');
+      window.location.href = redirectTo;
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : 'Unexpected error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onSignUp = async (values: SignUpValues) => {
+    setStatus(null);
+    setIsSubmitting(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: { emailRedirectTo: undefined }
+      });
+      if (error) {
+        setStatus(error.message);
+        return;
+      }
+      setStatus('Account created. You can sign in now.');
+      setMode('in');
+      signInForm.setValue('email', values.email);
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : 'Unexpected error');
     } finally {
       setIsSubmitting(false);
     }
@@ -72,33 +90,125 @@ function LoginContent() {
         <p className="mb-6 text-center text-sm text-slate-300">
           Private-by-default canvas for your photos, videos, and memories.
         </p>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500 focus:ring-2"
-              placeholder="you@example.com"
-              {...register('email')}
-            />
-            {errors.email && (
-              <p className="mt-1 text-xs text-red-400">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="flex w-full items-center justify-center rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting ? 'Sending link…' : 'Send magic link'}
-          </button>
-        </form>
+
+        {mode === 'in' ? (
+          <>
+            <form onSubmit={signInForm.handleSubmit(onSignIn)} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium" htmlFor="email">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500 focus:ring-2"
+                  placeholder="you@example.com"
+                  {...signInForm.register('email')}
+                />
+                {signInForm.formState.errors.email && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {signInForm.formState.errors.email.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium" htmlFor="password">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500 focus:ring-2"
+                  placeholder="••••••••"
+                  {...signInForm.register('password')}
+                />
+                {signInForm.formState.errors.password && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {signInForm.formState.errors.password.message}
+                  </p>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex w-full items-center justify-center rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
+            <p className="mt-4 text-center text-sm text-slate-400">
+              No account?{' '}
+              <button
+                type="button"
+                onClick={() => setMode('up')}
+                className="text-sky-400 hover:underline"
+              >
+                Create one
+              </button>
+            </p>
+          </>
+        ) : (
+          <>
+            <form onSubmit={signUpForm.handleSubmit(onSignUp)} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium" htmlFor="signup-email">
+                  Email
+                </label>
+                <input
+                  id="signup-email"
+                  type="email"
+                  autoComplete="email"
+                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500 focus:ring-2"
+                  placeholder="you@example.com"
+                  {...signUpForm.register('email')}
+                />
+                {signUpForm.formState.errors.email && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {signUpForm.formState.errors.email.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium" htmlFor="signup-password">
+                  Password
+                </label>
+                <input
+                  id="signup-password"
+                  type="password"
+                  autoComplete="new-password"
+                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500 focus:ring-2"
+                  placeholder="At least 6 characters"
+                  {...signUpForm.register('password')}
+                />
+                {signUpForm.formState.errors.password && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {signUpForm.formState.errors.password.message}
+                  </p>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex w-full items-center justify-center rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? 'Creating…' : 'Create account'}
+              </button>
+            </form>
+            <p className="mt-4 text-center text-sm text-slate-400">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => setMode('in')}
+                className="text-sky-400 hover:underline"
+              >
+                Sign in
+              </button>
+            </p>
+          </>
+        )}
+
         {status && (
           <p className="mt-4 text-center text-xs text-slate-300">{status}</p>
         )}
@@ -120,4 +230,3 @@ export default function LoginPage() {
     </Suspense>
   );
 }
-
