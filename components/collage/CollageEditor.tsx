@@ -218,13 +218,14 @@ export function CollageEditor({
         .eq('experience_id', experienceId)
         .in('kind', ['photo', 'video']);
       if (!error && data) {
-        setAssets(data);
+        const assetsList = data as Asset[];
+        setAssets(assetsList);
         if (Object.keys(initialPreviewUrls).length > 0) {
           setPreviewUrls(initialPreviewUrls);
         } else {
           const urlMap: Record<string, string> = {};
           await Promise.all(
-            data.map(async (asset) => {
+            assetsList.map(async (asset) => {
               const { data: urlData } = await supabase.storage
                 .from('user_uploads')
                 .createSignedUrl(asset.storage_path, 60 * 60);
@@ -238,7 +239,7 @@ export function CollageEditor({
         } else {
           const thumbMap: Record<string, string> = {};
           await Promise.all(
-            data.map(async (asset) => {
+            assetsList.map(async (asset) => {
               const opts =
                 asset.kind === 'photo'
                   ? { transform: { width: 200, height: 200, resize: 'cover' as const } }
@@ -434,7 +435,7 @@ export function CollageEditor({
         elements
       };
       const { error } = await supabase.from('collage_pages').upsert(
-        pageId ? [{ id: pageId, ...payload }] : [payload],
+        (pageId ? [{ id: pageId, ...payload }] : [payload]) as any,
         { onConflict: 'id' }
       );
       if (error) {

@@ -35,7 +35,7 @@ export function JournalForm({ experienceId }: Props) {
       const { error } = await supabase.from('journal_entries').insert({
         experience_id: experienceId,
         content: values.content
-      });
+      } as any);
       if (error) {
         setStatus(error.message);
         return;

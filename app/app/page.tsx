@@ -8,10 +8,19 @@ export default async function DashboardPage() {
     data: { user }
   } = await supabase.auth.getUser();
 
-  const { data: experiences } = await supabase
+  const { data: experiencesData } = await supabase
     .from('experiences')
     .select('*')
     .order('start_at', { ascending: false });
+
+  type ExperienceRow = {
+    id: string;
+    title: string;
+    start_at: string;
+    end_at: string | null;
+    location_name: string | null;
+  };
+  const experiences = (experiencesData ?? []) as ExperienceRow[];
 
   return (
     <div className="space-y-4">
@@ -30,7 +39,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {experiences && experiences.length > 0 ? (
+      {experiences.length > 0 ? (
         <ul className="grid gap-3 md:grid-cols-2">
           {experiences.map((exp) => (
             <li

@@ -47,7 +47,8 @@ export default function NewExperiencePage() {
         return;
       }
 
-      router.push(`/app/experience/${data.id}`);
+      const id = (data as { id: string })?.id;
+      if (id) router.push(`/app/experience/${id}`);
     } catch (err: any) {
       setStatus(err.message ?? 'Unexpected error');
     }

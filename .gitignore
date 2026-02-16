@@ -41,3 +41,4 @@ public/worker-*.js.map
 
 # TypeScript
 next-env.d.ts
+.vercel

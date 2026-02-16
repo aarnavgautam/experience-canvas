@@ -19,9 +19,7 @@
     "jsx": "preserve",
     "incremental": true,
     "types": [
-      "next",
-      "next/image-types",
-      "next-pwa"
+      "next"
     ],
     "baseUrl": ".",
     "paths": {
